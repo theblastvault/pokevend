@@ -2,21 +2,21 @@
   "name": "TBV Tracker",
   "short_name": "TBV Tracker",
   "description": "TCG vendor sales, buy, and trade tracker",
-  "start_url": "/pokevend/index.html",
-  "scope": "/pokevend/",
+  "start_url": "https://theblastvault.github.io/pokevend/index.html",
+  "scope": "https://theblastvault.github.io/pokevend/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "https://theblastvault.github.io/pokevend/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "https://theblastvault.github.io/pokevend/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

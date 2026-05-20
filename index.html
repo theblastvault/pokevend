@@ -838,7 +838,7 @@ loadData();
 renderShowList();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('https://theblastvault.github.io/pokevend/sw.js', {scope: '/pokevend/'}).catch(() => {});
 }
 </script>
 </body>
