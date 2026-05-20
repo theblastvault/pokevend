@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="TBV Tracker" />
+<meta name="theme-color" content="#0a0a0f" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="manifest" href="manifest.json" />
+<title>TBV Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c26;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0f0f5;
+  --muted: #7a7a90;
+  --sell: #00e5a0;
+  --sell-bg: rgba(0,229,160,0.12);
+  --sell-border: rgba(0,229,160,0.3);
+  --buy: #ff4d4d;
+  --buy-bg: rgba(255,77,77,0.12);
+  --buy-border: rgba(255,77,77,0.3);
+  --trade: #ffb84d;
+  --trade-bg: rgba(255,184,77,0.12);
+  --trade-border: rgba(255,184,77,0.3);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; overscroll-behavior: none; }
+body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+
+/* ── Show picker screen ── */
+#showScreen {
+  display: flex; flex-direction: column;
+  min-height: 100%; padding: env(safe-area-inset-top, 44px) 20px 40px;
+}
+.show-logo { margin: 32px 0 8px; }
+.show-logo h1 { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+.show-logo h1 span { color: var(--sell); }
+.show-logo p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.show-section-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted); margin: 28px 0 10px;
+}
+
+.show-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.show-item {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: border-color .15s;
+}
+.show-item:active { border-color: var(--sell-border); }
+.show-item-left { display: flex; flex-direction: column; gap: 3px; }
+.show-item-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.show-item-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.show-item-chevron { color: var(--muted); }
+.show-item-chevron svg { width: 16px; height: 16px; stroke-width: 2; }
+.show-item-delete {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  color: var(--muted); opacity: 0.5; margin-left: 4px;
+}
+.show-item-delete:active { opacity: 1; color: var(--buy); }
+.show-item-delete svg { width: 15px; height: 15px; stroke-width: 2; display: block; }
+
+.show-empty { font-size: 13px; color: var(--muted); padding: 16px 0; text-align: center; }
+
+.new-show-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 18px; margin-top: 8px;
+}
+.new-show-card input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); color: var(--text); font-family: 'Syne', sans-serif;
+  font-size: 15px; padding: 12px 14px; -webkit-appearance: none; appearance: none;
+  margin-bottom: 10px;
+}
+.new-show-card input:focus { outline: none; border-color: rgba(255,255,255,0.3); }
+.new-show-card input::placeholder { color: var(--muted); }
+.new-show-btn {
+  width: 100%; padding: 14px; border-radius: var(--radius-sm);
+  border: none; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; color: #0a0a0f; background: var(--sell);
+  -webkit-appearance: none; transition: opacity .15s, transform .1s;
+}
+.new-show-btn:active { transform: scale(.97); opacity: .9; }
+
+/* ── Main app ── */
+#appScreen { display: none; flex-direction: column; height: 100%; }
+
+.app-header {
+  padding: env(safe-area-inset-top, 44px) 16px 14px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.app-header-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+.app-header h1 span { color: var(--sell); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.hstat { text-align: right; }
+.hstat-val { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--sell); }
+.hstat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.back-btn {
+  background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600;
+  padding: 5px 10px; cursor: pointer; -webkit-appearance: none;
+  display: flex; align-items: center; gap: 4px;
+}
+.back-btn svg { width: 13px; height: 13px; stroke-width: 2; }
+.show-name-bar {
+  font-size: 11px; color: var(--muted); margin-top: 4px;
+  display: flex; align-items: center; gap: 5px;
+}
+.show-name-bar svg { width: 12px; height: 12px; stroke-width: 2; color: var(--sell); }
+.show-name-bar span { color: var(--sell); font-weight: 600; }
+
+.scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 16px 120px; }
+
+.type-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+.type-btn {
+  padding: 14px 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: .03em;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  transition: all .15s ease; -webkit-appearance: none;
+}
+.type-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+.type-btn.active-sell  { background: var(--sell-bg);  border-color: var(--sell-border);  color: var(--sell); }
+.type-btn.active-buy   { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy); }
+.type-btn.active-trade { background: var(--trade-bg); border-color: var(--trade-border); color: var(--trade); }
+
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+.field input, .field textarea, .field select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); color: var(--text); font-family: 'Syne', sans-serif;
+  font-size: 15px; padding: 12px 14px;
+  -webkit-appearance: none; appearance: none; transition: border-color .15s;
+}
+.field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a90' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; }
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: rgba(255,255,255,0.3); }
+.field textarea { height: 80px; resize: none; font-size: 14px; line-height: 1.5; }
+.amount-wrap { position: relative; }
+.amount-wrap .prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: 'DM Mono', monospace; font-size: 15px; pointer-events: none; }
+.amount-wrap input { padding-left: 28px; font-size: 22px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+.cash-dir-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.cash-dir-btn {
+  padding: 11px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--muted); font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  -webkit-appearance: none; transition: all .15s;
+}
+.cash-dir-btn svg { width: 15px; height: 15px; stroke-width: 2; }
+.cash-dir-btn.active-in  { background: var(--sell-bg);  border-color: var(--sell-border);  color: var(--sell); }
+.cash-dir-btn.active-out { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy); }
+
+.check-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check-section { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px; }
+.check-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
+.check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+.check-row:last-child { margin-bottom: 0; }
+.check-row input[type=checkbox] {
+  width: 18px; height: 18px; border-radius: 5px;
+  background: var(--surface); border: 1px solid var(--border2);
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+  flex-shrink: 0; position: relative; transition: all .15s;
+}
+.check-row input[type=checkbox]:checked { background: var(--trade); border-color: var(--trade); }
+.check-row input[type=checkbox]:checked::after {
+  content: ''; position: absolute; left: 4px; top: 1px;
+  width: 8px; height: 12px; border: 2px solid #0a0a0f;
+  border-top: none; border-left: none; transform: rotate(45deg);
+}
+.check-row span { font-size: 13px; color: var(--text); font-weight: 500; }
+
+.video-zone {
+  background: var(--surface); border: 1px dashed var(--border2);
+  border-radius: var(--radius); padding: 20px 16px; text-align: center; margin-bottom: 14px;
+}
+.video-zone.has-video { border-style: solid; border-color: rgba(0,229,160,0.25); }
+.vz-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.vz-sub { font-size: 12px; color: var(--muted); opacity: 0.6; margin-bottom: 14px; }
+.vz-btns { display: flex; gap: 8px; justify-content: center; }
+.vz-btn {
+  padding: 10px 18px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; -webkit-appearance: none;
+}
+.vz-btn.record-btn { color: #ff6b6b; border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.08); }
+.vz-btn.stop-btn   { color: #ff6b6b; border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.15); }
+.vz-btn svg { width: 16px; height: 16px; stroke-width: 2; }
+video.preview   { width: 100%; border-radius: var(--radius-sm); max-height: 200px; object-fit: cover; margin-top: 12px; display: none; }
+video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180px; object-fit: cover; margin-top: 12px; display: none; }
+.video-attached { margin-top: 10px; display: none; align-items: center; gap: 6px; justify-content: center; }
+.video-attached svg { width: 14px; height: 14px; color: var(--sell); stroke-width: 2; }
+.video-attached span { font-size: 12px; color: var(--sell); font-family: 'DM Mono', monospace; }
+.rec-timer { font-size: 12px; color: #ff6b6b; font-family: 'DM Mono', monospace; margin-top: 8px; }
+
+.submit-btn {
+  width: 100%; padding: 16px; border-radius: var(--radius);
+  border: none; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+  letter-spacing: .02em; cursor: pointer; color: #0a0a0f;
+  background: var(--sell); transition: opacity .15s, transform .1s;
+  margin-bottom: 28px; -webkit-appearance: none;
+}
+.submit-btn:active { transform: scale(.97); opacity: .9; }
+.submit-btn.type-buy   { background: var(--buy); color: #fff; }
+.submit-btn.type-trade { background: var(--trade); }
+
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+.stat-value.green { color: var(--sell); }
+.stat-value.red   { color: var(--buy); }
+.stat-value.amber { color: var(--trade); }
+
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-head h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.export-link { font-size: 12px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+.export-link:active { color: var(--text); }
+.export-link svg { width: 13px; height: 13px; stroke-width: 2; }
+
+.ledger { display: flex; flex-direction: column; gap: 8px; }
+.ledger-empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 13px; border: 1px dashed var(--border); border-radius: var(--radius); }
+
+.entry-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;
+}
+.entry-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 6px; margin-bottom: 5px; }
+.badge-sell  { background: var(--sell-bg);  color: var(--sell);  border: 1px solid var(--sell-border); }
+.badge-buy   { background: var(--buy-bg);   color: var(--buy);   border: 1px solid var(--buy-border); }
+.badge-trade { background: var(--trade-bg); color: var(--trade); border: 1px solid var(--trade-border); }
+.badge-cash-in  { background: var(--sell-bg); color: var(--sell); border: 1px solid var(--sell-border); font-size: 9px; margin-left: 4px; }
+.badge-cash-out { background: var(--buy-bg);  color: var(--buy);  border: 1px solid var(--buy-border);  font-size: 9px; margin-left: 4px; }
+.entry-desc { font-size: 13px; color: var(--text); line-height: 1.3; }
+.entry-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 3px; }
+.entry-trade-items { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+.entry-right { text-align: right; }
+.entry-amount { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+.entry-video-badge { margin-top: 5px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+.entry-video-badge svg { width: 12px; height: 12px; color: var(--sell); stroke-width: 2; }
+.entry-video-badge span { font-size: 10px; color: var(--sell); font-family: 'DM Mono', monospace; }
+.entry-del-btn {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--muted); opacity: 0.4; display: flex; align-items: center;
+  margin-top: 6px; margin-left: auto;
+}
+.entry-del-btn:active { opacity: 1; color: var(--buy); }
+.entry-del-btn svg { width: 14px; height: 14px; stroke-width: 2; display: block; }
+
+.toast {
+  position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--text); color: var(--bg);
+  font-size: 13px; font-weight: 700; font-family: 'Syne', sans-serif;
+  padding: 10px 20px; border-radius: 999px;
+  opacity: 0; transition: opacity .2s, transform .2s;
+  pointer-events: none; white-space: nowrap; z-index: 200;
+  max-width: calc(100vw - 32px); text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* confirm overlay */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.confirm-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 24px; width: 100%; max-width: 320px;
+}
+.confirm-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.confirm-box p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.confirm-cancel {
+  padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2);
+  background: none; color: var(--text); font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.confirm-delete {
+  padding: 12px; border-radius: var(--radius-sm); border: none;
+  background: var(--buy); color: #fff; font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- ── SHOW PICKER SCREEN ── -->
+<div id="showScreen">
+  <div class="show-logo">
+    <h1>TBV <span>Tracker</span></h1>
+    <p>Select a show to continue, or create a new one.</p>
+  </div>
+
+  <div class="show-section-label">Previous shows</div>
+  <div class="show-list" id="showList">
+    <div class="show-empty">No shows yet — create your first one below.</div>
+  </div>
+
+  <div class="show-section-label">New show</div>
+  <div class="new-show-card">
+    <input type="text" id="newShowName" placeholder="e.g. Dallas Card Show — June 2025" maxlength="80" />
+    <button class="new-show-btn" onclick="createShow()">Create &amp; open show</button>
+  </div>
+</div>
+
+<!-- ── MAIN APP SCREEN ── -->
+<div id="appScreen">
+  <header class="app-header">
+    <div class="app-header-row1">
+      <h1>TBV <span>Tracker</span></h1>
+      <div class="header-right">
+        <div class="hstat">
+          <div class="hstat-val" id="hNetVal">$0.00</div>
+          <div class="hstat-label">Net today</div>
+        </div>
+        <button class="back-btn" onclick="goToShowPicker()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Shows
+        </button>
+      </div>
+    </div>
+    <div class="show-name-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="3"/></svg>
+      <span id="activeShowName">—</span>
+    </div>
+  </header>
+
+  <div class="scroll-area">
+    <div class="type-selector">
+      <button class="type-btn active-sell" data-type="sell" onclick="selectType('sell')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        Sell
+      </button>
+      <button class="type-btn" data-type="buy" onclick="selectType('buy')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        Buy
+      </button>
+      <button class="type-btn" data-type="trade" onclick="selectType('trade')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+        Trade
+      </button>
+    </div>
+
+    <div class="form-card">
+      <div id="tradeExtras" style="display:none;">
+        <div class="field">
+          <label>Cash direction</label>
+          <div class="cash-dir-row">
+            <button class="cash-dir-btn active-in" id="cashInBtn" onclick="setCashDir('in')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              Cash In
+            </button>
+            <button class="cash-dir-btn" id="cashOutBtn" onclick="setCashDir('out')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              Cash Out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Amount</label>
+        <div class="amount-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0" step="0.01" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.5;">(optional)</span></label>
+        <textarea id="descInput" placeholder="e.g. PSA 10 Charizard Base Set…"></textarea>
+      </div>
+
+      <div id="tradeCheckboxes" style="display:none;" class="field">
+        <label>Items involved</label>
+        <div class="check-sections">
+          <div class="check-section">
+            <div class="check-section-title">Out</div>
+            <label class="check-row"><input type="checkbox" id="outSealed" /><span>Sealed</span></label>
+            <label class="check-row"><input type="checkbox" id="outSingles" /><span>Single(s)</span></label>
+            <label class="check-row"><input type="checkbox" id="outSlabs" /><span>Slab(s)</span></label>
+          </div>
+          <div class="check-section">
+            <div class="check-section-title">In</div>
+            <label class="check-row"><input type="checkbox" id="inSealed" /><span>Sealed</span></label>
+            <label class="check-row"><input type="checkbox" id="inSingles" /><span>Single(s)</span></label>
+            <label class="check-row"><input type="checkbox" id="inSlabs" /><span>Slab(s)</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="video-zone" id="videoZone">
+      <div class="vz-title">Transaction video</div>
+      <div class="vz-sub">Record or upload a short clip for your records</div>
+      <div class="vz-btns">
+        <button class="vz-btn" onclick="document.getElementById('fileInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Upload
+        </button>
+        <button class="vz-btn record-btn" id="recordBtn" onclick="startRecord()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          Record
+        </button>
+      </div>
+      <input type="file" id="fileInput" accept="video/*" capture="environment" style="display:none" onchange="handleFile(event)" />
+      <video class="live-feed" id="liveFeed" autoplay muted playsinline></video>
+      <div id="recControls" style="display:none; margin-top:10px;">
+        <button class="vz-btn stop-btn" onclick="stopRecord()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          Stop
+        </button>
+        <div class="rec-timer" id="recTimer">● REC 0s</div>
+      </div>
+      <video class="preview" id="videoPreview" controls playsinline></video>
+      <div class="video-attached" id="videoAttached">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 10l4.553-2.069A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+        <span id="videoNameLabel">video attached</span>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Save sell</button>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Sold</div>
+        <div class="stat-value green" id="statSell">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Bought</div>
+        <div class="stat-value red" id="statBuy">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Trades</div>
+        <div class="stat-value amber" id="statTrade">0</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Ledger</h2>
+      <span class="export-link" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Export CSV
+      </span>
+    </div>
+    <div class="ledger" id="ledger">
+      <div class="ledger-empty">No transactions yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- confirm delete overlay -->
+<div class="confirm-overlay" id="confirmOverlay" style="display:none;">
+  <div class="confirm-box">
+    <h3>Delete show?</h3>
+    <p id="confirmMsg">This will permanently delete this show and all its transactions.</p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="hideConfirm()">Cancel</button>
+      <button class="confirm-delete" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHOWS_KEY   = 'pokevend_shows';
+const ENTRIES_KEY = 'pokevend_entries';
+
+let shows = [];
+let entries = [];
+let activeShowId = null;
+
+let currentType    = 'sell';
+let currentCashDir = 'in';
+let currentVideoBlob = null;
+let currentVideoName = null;
+let mediaRecorder  = null;
+let recordedChunks = [];
+let recInterval    = null;
+let recSeconds     = 0;
+let stream         = null;
+let pendingDeleteId = null;
+
+function loadData() {
+  try { shows   = JSON.parse(localStorage.getItem(SHOWS_KEY))   || []; } catch(e) { shows = []; }
+  try { entries = JSON.parse(localStorage.getItem(ENTRIES_KEY)) || []; } catch(e) { entries = []; }
+}
+
+function saveShows()   { try { localStorage.setItem(SHOWS_KEY,   JSON.stringify(shows));   } catch(e) {} }
+function saveEntries() { try { localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries.map(e => ({...e, videoBlob: null})))); } catch(e) {} }
+
+function showEntries() { return entries.filter(e => e.showId === activeShowId); }
+function activeShow()  { return shows.find(s => s.id === activeShowId); }
+
+/* ── SHOW PICKER ── */
+function renderShowList() {
+  const el = document.getElementById('showList');
+  if (!shows.length) {
+    el.innerHTML = '<div class="show-empty">No shows yet — create your first one below.</div>';
+    return;
+  }
+  el.innerHTML = shows.slice().reverse().map(s => {
+    const cnt = entries.filter(e => e.showId === s.id).length;
+    const dateStr = new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `
+    <div class="show-item" onclick="openShow('${s.id}')">
+      <div class="show-item-left">
+        <div class="show-item-name">${escHtml(s.name)}</div>
+        <div class="show-item-meta">${dateStr} · ${cnt} transaction${cnt !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="display:flex;align-items:center;">
+        <div class="show-item-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg></div>
+        <button class="show-item-delete" onclick="confirmDelete(event,'${s.id}','${escHtml(s.name).replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function createShow() {
+  const name = document.getElementById('newShowName').value.trim();
+  if (!name) { showToast('Enter a show name'); return; }
+  const show = { id: 'show_' + Date.now(), name, createdAt: Date.now() };
+  shows.push(show);
+  saveShows();
+  document.getElementById('newShowName').value = '';
+  openShow(show.id);
+}
+
+function openShow(id) {
+  activeShowId = id;
+  const s = activeShow();
+  document.getElementById('activeShowName').textContent = s ? s.name : '—';
+  document.getElementById('showScreen').style.display  = 'none';
+  document.getElementById('appScreen').style.display   = 'flex';
+  resetForm();
+  renderLedger();
+  updateStats();
+}
+
+function goToShowPicker() {
+  activeShowId = null;
+  document.getElementById('appScreen').style.display  = 'none';
+  document.getElementById('showScreen').style.display = 'block';
+  renderShowList();
+}
+
+function confirmDelete(evt, id, name) {
+  evt.stopPropagation();
+  pendingDeleteId = id;
+  document.getElementById('confirmMsg').textContent = `"${name}" and all its transactions will be permanently deleted.`;
+  document.getElementById('confirmOverlay').style.display = 'flex';
+  document.getElementById('confirmOkBtn').onclick = doDelete;
+}
+
+function hideConfirm() {
+  document.getElementById('confirmOverlay').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+function doDelete() {
+  if (!pendingDeleteId) return;
+  shows   = shows.filter(s => s.id !== pendingDeleteId);
+  entries = entries.filter(e => e.showId !== pendingDeleteId);
+  saveShows(); saveEntries();
+  hideConfirm();
+  renderShowList();
+  showToast('Show deleted');
+}
+
+function confirmDeleteEntry(id) {
+  pendingDeleteId = id;
+  const e = entries.find(en => en.id === id);
+  const label = e ? (e.desc || e.type) : 'this transaction';
+  document.getElementById('confirmMsg').textContent = `Delete "${escHtml(String(label))}"? This cannot be undone.`;
+  document.getElementById('confirmOverlay').style.display = 'flex';
+  document.getElementById('confirmOkBtn').onclick = doDeleteEntry;
+}
+
+function doDeleteEntry() {
+  if (!pendingDeleteId) return;
+  entries = entries.filter(e => e.id !== pendingDeleteId);
+  saveEntries();
+  hideConfirm();
+  renderLedger();
+  updateStats();
+  showToast('Transaction deleted');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── TYPE / FORM ── */
+function selectType(type) {
+  currentType = type;
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.className = 'type-btn';
+    if (b.dataset.type === type) b.classList.add('active-' + type);
+  });
+  const btn = document.getElementById('submitBtn');
+  btn.className = 'submit-btn type-' + type;
+  btn.textContent = 'Save ' + type;
+  const isTrade = type === 'trade';
+  document.getElementById('tradeExtras').style.display     = isTrade ? 'block' : 'none';
+  document.getElementById('tradeCheckboxes').style.display = isTrade ? 'block' : 'none';
+}
+
+function setCashDir(dir) {
+  currentCashDir = dir;
+  document.getElementById('cashInBtn').className  = 'cash-dir-btn' + (dir === 'in'  ? ' active-in'  : '');
+  document.getElementById('cashOutBtn').className = 'cash-dir-btn' + (dir === 'out' ? ' active-out' : '');
+}
+
+function getTradeItems(prefix) {
+  const items = [];
+  if (document.getElementById(prefix + 'Sealed').checked)  items.push('Sealed');
+  if (document.getElementById(prefix + 'Singles').checked) items.push('Single(s)');
+  if (document.getElementById(prefix + 'Slabs').checked)   items.push('Slab(s)');
+  return items;
+}
+
+function resetCheckboxes() {
+  ['outSealed','outSingles','outSlabs','inSealed','inSingles','inSlabs'].forEach(id => {
+    document.getElementById(id).checked = false;
+  });
+}
+
+function resetForm() {
+  document.getElementById('amountInput').value = '';
+  document.getElementById('descInput').value   = '';
+  document.getElementById('videoPreview').style.display  = 'none';
+  document.getElementById('videoAttached').style.display = 'none';
+  document.getElementById('videoZone').classList.remove('has-video');
+  document.getElementById('fileInput').value = '';
+  resetCheckboxes();
+  currentVideoBlob = null; currentVideoName = null;
+}
+
+/* ── VIDEO ── */
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentVideoBlob = file; currentVideoName = file.name;
+  showVideoPreview(URL.createObjectURL(file), file.name);
+}
+
+async function startRecord() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+    document.getElementById('liveFeed').srcObject = stream;
+    document.getElementById('liveFeed').style.display = 'block';
+    document.getElementById('recControls').style.display = 'block';
+    document.getElementById('recordBtn').style.display = 'none';
+    recordedChunks = []; recSeconds = 0;
+    const opts = MediaRecorder.isTypeSupported('video/mp4') ? { mimeType: 'video/mp4' } : {};
+    mediaRecorder = new MediaRecorder(stream, opts);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const mime = mediaRecorder.mimeType || 'video/webm';
+      const ext  = mime.includes('mp4') ? 'mp4' : 'webm';
+      currentVideoBlob = new Blob(recordedChunks, { type: mime });
+      currentVideoName = 'rec_' + Date.now() + '.' + ext;
+      document.getElementById('liveFeed').style.display = 'none';
+      stream.getTracks().forEach(t => t.stop());
+      showVideoPreview(URL.createObjectURL(currentVideoBlob), currentVideoName);
+    };
+    mediaRecorder.start(100);
+    recInterval = setInterval(() => {
+      recSeconds++;
+      document.getElementById('recTimer').textContent = '● REC ' + recSeconds + 's';
+      if (recSeconds >= 90) stopRecord();
+    }, 1000);
+  } catch(err) { showToast('Camera access denied'); }
+}
+
+function stopRecord() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  clearInterval(recInterval);
+  document.getElementById('recControls').style.display = 'none';
+  document.getElementById('recordBtn').style.display = 'flex';
+}
+
+function showVideoPreview(url, name) {
+  const prev = document.getElementById('videoPreview');
+  prev.src = url; prev.style.display = 'block';
+  document.getElementById('videoAttached').style.display = 'flex';
+  document.getElementById('videoNameLabel').textContent = name.length > 28 ? name.slice(0,25)+'...' : name;
+  document.getElementById('videoZone').classList.add('has-video');
+}
+
+/* ── ENTRY ── */
+function submitEntry() {
+  const raw = document.getElementById('amountInput').value;
+  const amount = parseFloat(raw);
+  if (!raw || isNaN(amount) || amount <= 0) { showToast('Enter a valid amount'); return; }
+  const desc = document.getElementById('descInput').value.trim();
+  const now  = new Date();
+  const entry = {
+    id:       Date.now(),
+    showId:   activeShowId,
+    type:     currentType,
+    cashDir:  currentType === 'trade' ? currentCashDir : null,
+    amount,
+    desc:     desc || null,
+    itemsOut: currentType === 'trade' ? getTradeItems('out') : [],
+    itemsIn:  currentType === 'trade' ? getTradeItems('in')  : [],
+    time:     now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    date:     now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    videoName: currentVideoName || null,
+    videoBlob: currentVideoBlob || null,
+  };
+  entries.unshift(entry);
+  saveEntries();
+  renderLedger();
+  updateStats();
+  resetForm();
+  showToast((currentType.charAt(0).toUpperCase() + currentType.slice(1)) + ' saved');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function fmt(n)      { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtShort(n) { if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'k'; return fmt(n); }
+
+function getExportType(e) {
+  if (e.type === 'sell')  return 'Income';
+  if (e.type === 'buy')   return 'Expense';
+  if (e.type === 'trade') return e.cashDir === 'in' ? 'Income' : 'Expense';
+  return e.type;
+}
+
+function updateStats() {
+  const se = showEntries();
+  const sells  = se.filter(e => e.type === 'sell').reduce((s,e) => s + e.amount, 0);
+  const buys   = se.filter(e => e.type === 'buy').reduce((s,e)  => s + e.amount, 0);
+  const trades = se.filter(e => e.type === 'trade').length;
+  const net    = sells - buys;
+  document.getElementById('statSell').textContent  = fmtShort(sells);
+  document.getElementById('statBuy').textContent   = fmtShort(buys);
+  document.getElementById('statTrade').textContent = trades;
+  document.getElementById('hNetVal').textContent   = (net >= 0 ? '+' : '') + fmtShort(net);
+}
+
+function renderLedger() {
+  const el = document.getElementById('ledger');
+  const se = showEntries();
+  if (!se.length) {
+    el.innerHTML = '<div class="ledger-empty">No transactions yet — log your first one above.</div>';
+    return;
+  }
+  el.innerHTML = se.map(e => {
+    const amtColor = e.type === 'sell' ? 'var(--sell)' : e.type === 'buy' ? 'var(--buy)' : 'var(--trade)';
+    const cashDirBadge = e.type === 'trade' && e.cashDir
+      ? `<span class="entry-badge badge-cash-${e.cashDir}">${e.cashDir === 'in' ? 'Cash In' : 'Cash Out'}</span>`
+      : '';
+    let tradeItems = '';
+    if (e.type === 'trade' && ((e.itemsOut && e.itemsOut.length) || (e.itemsIn && e.itemsIn.length))) {
+      const outStr = e.itemsOut && e.itemsOut.length ? 'Out: ' + e.itemsOut.join(', ') : '';
+      const inStr  = e.itemsIn  && e.itemsIn.length  ? 'In: '  + e.itemsIn.join(', ')  : '';
+      tradeItems = `<div class="entry-trade-items">${[outStr, inStr].filter(Boolean).join(' · ')}</div>`;
+    }
+    return `
+    <div class="entry-card">
+      <div>
+        <div><span class="entry-badge badge-${e.type}">${e.type}</span>${cashDirBadge}</div>
+        <div class="entry-desc">${e.desc ? escHtml(e.desc) : (e.type.charAt(0).toUpperCase()+e.type.slice(1))}</div>
+        ${tradeItems}
+        <div class="entry-meta">${e.time} · ${e.date}</div>
+      </div>
+      <div class="entry-right">
+        <div class="entry-amount" style="color:${amtColor}">${fmt(e.amount)}</div>
+        ${e.videoName ? `<div class="entry-video-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 10l4.553-2.069A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg><span>video</span></div>` : ''}
+        <button class="entry-del-btn" onclick="confirmDeleteEntry(${e.id})" aria-label="Delete transaction">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  const se = showEntries();
+  if (!se.length) { showToast('Nothing to export yet'); return; }
+  const showName = activeShow() ? activeShow().name : '';
+  const safeName = showName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const rows = [['Show','Type','Amount ($)','Cash Direction','Items Out','Items In','Description','Date','Time','Video Attached']];
+  se.forEach(e => rows.push([
+    showName,
+    getExportType(e),
+    e.amount.toFixed(2),
+    e.cashDir || '',
+    (e.itemsOut || []).join('; '),
+    (e.itemsIn  || []).join('; '),
+    e.desc || '',
+    e.date,
+    e.time,
+    e.videoName || ''
+  ]));
+  const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'tbv_' + safeName + '_' + new Date().toISOString().split('T')[0] + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ── INIT ── */
+loadData();
+renderShowList();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
