@@ -170,6 +170,7 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
 .cash-dir-btn.active-out { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy); }
 
 .check-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .check-section { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px; }
 .check-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
 .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
@@ -392,6 +393,30 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
       <div class="field">
         <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.5;">(optional)</span></label>
         <textarea id="descInput" placeholder="e.g. PSA 10 Charizard Base Set…"></textarea>
+      </div>
+
+      <div id="sellBuyPayment" class="field">
+        <label>Payment method <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.5;">(select all that apply)</span></label>
+        <div class="check-section" style="width:100%;">
+          <div class="pay-grid">
+            <label class="check-row"><input type="checkbox" id="payCash"   /><span>Cash</span></label>
+            <label class="check-row"><input type="checkbox" id="payZelle"  /><span>Zelle</span></label>
+            <label class="check-row"><input type="checkbox" id="payVenmo"  /><span>Venmo</span></label>
+            <label class="check-row"><input type="checkbox" id="payPaypal" /><span>PayPal</span></label>
+            <label class="check-row"><input type="checkbox" id="payWire"   /><span>Wire</span></label>
+            <label class="check-row"><input type="checkbox" id="payWise"   /><span>Wise</span></label>
+            <label class="check-row"><input type="checkbox" id="payOther"  /><span>Other</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div id="sellBuyItems" class="field">
+        <label>Item type <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.5;">(select all that apply)</span></label>
+        <div class="check-section" style="width:100%;">
+          <label class="check-row"><input type="checkbox" id="sbSealed"  /><span>Sealed</span></label>
+          <label class="check-row"><input type="checkbox" id="sbSingles" /><span>Single(s)</span></label>
+          <label class="check-row"><input type="checkbox" id="sbSlabs"   /><span>Slab(s)</span></label>
+        </div>
       </div>
 
       <div id="tradeCheckboxes" style="display:none;" class="field">
@@ -627,12 +652,28 @@ function selectType(type) {
   const isTrade = type === 'trade';
   document.getElementById('tradeExtras').style.display     = isTrade ? 'block' : 'none';
   document.getElementById('tradeCheckboxes').style.display = isTrade ? 'block' : 'none';
+  document.getElementById('sellBuyPayment').style.display  = isTrade ? 'none' : 'block';
+  document.getElementById('sellBuyItems').style.display    = isTrade ? 'none' : 'block';
 }
 
 function setCashDir(dir) {
   currentCashDir = dir;
   document.getElementById('cashInBtn').className  = 'cash-dir-btn' + (dir === 'in'  ? ' active-in'  : '');
   document.getElementById('cashOutBtn').className = 'cash-dir-btn' + (dir === 'out' ? ' active-out' : '');
+}
+
+function getPaymentMethods() {
+  const map = [['payCash','Cash'],['payZelle','Zelle'],['payVenmo','Venmo'],
+               ['payPaypal','PayPal'],['payWire','Wire'],['payWise','Wise'],['payOther','Other']];
+  return map.filter(([id]) => document.getElementById(id).checked).map(([,label]) => label);
+}
+
+function getSellBuyItems() {
+  const items = [];
+  if (document.getElementById('sbSealed').checked)  items.push('Sealed');
+  if (document.getElementById('sbSingles').checked) items.push('Single(s)');
+  if (document.getElementById('sbSlabs').checked)   items.push('Slab(s)');
+  return items;
 }
 
 function getTradeItems(prefix) {
@@ -644,7 +685,9 @@ function getTradeItems(prefix) {
 }
 
 function resetCheckboxes() {
-  ['outSealed','outSingles','outSlabs','inSealed','inSingles','inSlabs'].forEach(id => {
+  ['outSealed','outSingles','outSlabs','inSealed','inSingles','inSlabs',
+   'payCash','payZelle','payVenmo','payPaypal','payWire','payWise','payOther',
+   'sbSealed','sbSingles','sbSlabs'].forEach(id => {
     document.getElementById(id).checked = false;
   });
 }
@@ -728,6 +771,8 @@ function submitEntry() {
     desc:     desc || null,
     itemsOut: currentType === 'trade' ? getTradeItems('out') : [],
     itemsIn:  currentType === 'trade' ? getTradeItems('in')  : [],
+    paymentMethods: currentType !== 'trade' ? getPaymentMethods() : [],
+    itemTypes:      currentType !== 'trade' ? getSellBuyItems()   : [],
     time:     now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     date:     now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     videoName: currentVideoName || null,
@@ -782,12 +827,20 @@ function renderLedger() {
       const inStr  = e.itemsIn  && e.itemsIn.length  ? 'In: '  + e.itemsIn.join(', ')  : '';
       tradeItems = `<div class="entry-trade-items">${[outStr, inStr].filter(Boolean).join(' · ')}</div>`;
     }
+    let sellBuyMeta = '';
+    if (e.type !== 'trade') {
+      const payStr  = e.paymentMethods && e.paymentMethods.length ? e.paymentMethods.join(', ') : '';
+      const itemStr = e.itemTypes      && e.itemTypes.length      ? e.itemTypes.join(', ')      : '';
+      if (payStr || itemStr) {
+        sellBuyMeta = `<div class="entry-trade-items">${[payStr, itemStr].filter(Boolean).join(' · ')}</div>`;
+      }
+    }
     return `
     <div class="entry-card">
       <div>
         <div><span class="entry-badge badge-${e.type}">${e.type}</span>${cashDirBadge}</div>
         <div class="entry-desc">${e.desc ? escHtml(e.desc) : (e.type.charAt(0).toUpperCase()+e.type.slice(1))}</div>
-        ${tradeItems}
+        ${tradeItems}${sellBuyMeta}
         <div class="entry-meta">${e.time} · ${e.date}</div>
       </div>
       <div class="entry-right">
@@ -806,14 +859,16 @@ function exportCSV() {
   if (!se.length) { showToast('Nothing to export yet'); return; }
   const showName = activeShow() ? activeShow().name : '';
   const safeName = showName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  const rows = [['Show','Type','Amount ($)','Cash Direction','Items Out','Items In','Description','Date','Time','Video Attached']];
+  const rows = [['Show','Type','Amount ($)','Cash Direction','Items Out','Items In','Payment Method','Item Type','Description','Date','Time','Video Attached']];
   se.forEach(e => rows.push([
     showName,
     getExportType(e),
     e.amount.toFixed(2),
     e.cashDir || '',
-    (e.itemsOut || []).join('; '),
-    (e.itemsIn  || []).join('; '),
+    (e.itemsOut        || []).join('; '),
+    (e.itemsIn         || []).join('; '),
+    (e.paymentMethods  || []).join('; '),
+    (e.itemTypes       || []).join('; '),
     e.desc || '',
     e.date,
     e.time,
