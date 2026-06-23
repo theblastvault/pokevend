@@ -170,7 +170,8 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
 .cash-dir-btn.active-out { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy); }
 
 .check-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; align-items: center; }
+.check-row span { line-height: 1; display: flex; align-items: center; }
 .check-section { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px; }
 .check-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
 .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
