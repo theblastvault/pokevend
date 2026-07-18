@@ -30,21 +30,49 @@
   --trade: #ffb84d;
   --trade-bg: rgba(255,184,77,0.12);
   --trade-border: rgba(255,184,77,0.3);
+  --brand-blue: #3ec6ff;
+  --brand-purple: #8b5cf6;
+  --brand-gradient: linear-gradient(135deg, var(--brand-blue), var(--brand-purple));
   --radius: 16px;
   --radius-sm: 10px;
 }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes glowPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; overscroll-behavior: none; }
-body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+body {
+  display: flex; flex-direction: column; max-width: 480px; margin: 0 auto;
+  background:
+    radial-gradient(circle at 15% -8%, rgba(62,198,255,0.16), transparent 45%),
+    radial-gradient(circle at 90% 0%, rgba(139,92,246,0.16), transparent 40%),
+    var(--bg);
+}
 
 /* ── Show picker screen ── */
 #showScreen {
   display: flex; flex-direction: column;
   min-height: 100%; padding: env(safe-area-inset-top, 44px) 20px 40px;
 }
-.show-logo { margin: 32px 0 8px; }
+.show-logo { margin: 32px 0 8px; display: flex; align-items: center; gap: 14px; }
+.brand-mark {
+  position: relative; width: 56px; height: 56px; flex-shrink: 0;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.brand-mark::before {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%;
+  background: var(--brand-gradient); filter: blur(10px); opacity: .55;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+.brand-mark img { position: relative; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.brand-mark .brand-fallback {
+  position: relative; width: 100%; height: 100%; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+  background-image: var(--brand-gradient); color: #0a0a0f; letter-spacing: -0.5px;
+}
 .show-logo h1 { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
-.show-logo h1 span { color: var(--sell); }
+.show-logo h1 span { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .show-logo p { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 .show-section-label {
@@ -57,9 +85,10 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: var(--radius-sm); padding: 14px 16px;
   display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; transition: border-color .15s;
+  cursor: pointer; transition: border-color .15s, transform .15s;
+  animation: fadeUp .3s ease both;
 }
-.show-item:active { border-color: var(--sell-border); }
+.show-item:active { border-color: var(--brand-blue); transform: scale(.98); }
 .show-item-left { display: flex; flex-direction: column; gap: 3px; }
 .show-item-name { font-size: 15px; font-weight: 600; color: var(--text); }
 .show-item-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
@@ -89,7 +118,8 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
 .new-show-btn {
   width: 100%; padding: 14px; border-radius: var(--radius-sm);
   border: none; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
-  cursor: pointer; color: #0a0a0f; background: var(--sell);
+  cursor: pointer; color: #0a0a0f; background: var(--brand-gradient);
+  box-shadow: 0 4px 18px rgba(139,92,246,0.28);
   -webkit-appearance: none; transition: opacity .15s, transform .1s;
 }
 .new-show-btn:active { transform: scale(.97); opacity: .9; }
@@ -102,9 +132,15 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
   background: var(--bg); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 50;
 }
-.app-header-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.app-header::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--brand-blue), var(--brand-purple), var(--trade));
+}
+.app-header-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; gap: 10px; }
+.app-header-title { display: flex; align-items: center; gap: 9px; }
+.app-logo { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-.app-header h1 span { color: var(--sell); }
+.app-header h1 span { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .hstat { text-align: right; }
 .hstat-val { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--sell); }
@@ -135,9 +171,9 @@ body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; 
   transition: all .15s ease; -webkit-appearance: none;
 }
 .type-btn svg { width: 22px; height: 22px; stroke-width: 2; }
-.type-btn.active-sell  { background: var(--sell-bg);  border-color: var(--sell-border);  color: var(--sell); }
-.type-btn.active-buy   { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy); }
-.type-btn.active-trade { background: var(--trade-bg); border-color: var(--trade-border); color: var(--trade); }
+.type-btn.active-sell  { background: var(--sell-bg);  border-color: var(--sell-border);  color: var(--sell);  box-shadow: 0 2px 14px rgba(0,229,160,0.18);  transform: translateY(-1px); }
+.type-btn.active-buy   { background: var(--buy-bg);   border-color: var(--buy-border);   color: var(--buy);   box-shadow: 0 2px 14px rgba(255,77,77,0.18);  transform: translateY(-1px); }
+.type-btn.active-trade { background: var(--trade-bg); border-color: var(--trade-border); color: var(--trade); box-shadow: 0 2px 14px rgba(255,184,77,0.18); transform: translateY(-1px); }
 
 .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
 .field { margin-bottom: 16px; }
@@ -227,7 +263,8 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
 .submit-btn.type-trade { background: var(--trade); }
 
 .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
-.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; transition: transform .15s, border-color .15s; }
+.stat-card:active { transform: scale(.97); border-color: var(--border2); }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
 .stat-value.green { color: var(--sell); }
@@ -247,6 +284,7 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 14px;
   display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;
+  animation: fadeUp .3s ease both;
 }
 .entry-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 6px; margin-bottom: 5px; }
 .badge-sell  { background: var(--sell-bg);  color: var(--sell);  border: 1px solid var(--sell-border); }
@@ -312,8 +350,14 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
 <!-- ── SHOW PICKER SCREEN ── -->
 <div id="showScreen">
   <div class="show-logo">
-    <h1>TBV <span>Tracker</span></h1>
-    <p>Select a show to continue, or create a new one.</p>
+    <div class="brand-mark">
+      <img src="logo.png" alt="The Blast Vault" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+      <div class="brand-fallback" style="display:none;">TBV</div>
+    </div>
+    <div>
+      <h1>TBV <span>Tracker</span></h1>
+      <p>Select a show to continue, or create a new one.</p>
+    </div>
   </div>
 
   <div class="show-section-label">Previous shows</div>
@@ -332,7 +376,10 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
 <div id="appScreen">
   <header class="app-header">
     <div class="app-header-row1">
-      <h1>TBV <span>Tracker</span></h1>
+      <div class="app-header-title">
+        <img class="app-logo" src="logo.png" alt="" onerror="this.style.display='none';" />
+        <h1>TBV <span>Tracker</span></h1>
+      </div>
       <div class="header-right">
         <div class="hstat">
           <div class="hstat-val" id="hNetVal">$0.00</div>
@@ -379,6 +426,21 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
               Cash Out
             </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Payment method <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.5;">(select all that apply)</span></label>
+          <div class="check-section" style="width:100%;">
+            <div class="pay-grid">
+              <label class="check-row"><input type="checkbox" id="tradePayCash"   /><span>Cash</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayZelle"  /><span>Zelle</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayVenmo"  /><span>Venmo</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayPaypal" /><span>PayPal</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayWire"   /><span>Wire</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayWise"   /><span>Wise</span></label>
+              <label class="check-row"><input type="checkbox" id="tradePayOther"  /><span>Other</span></label>
+            </div>
           </div>
         </div>
       </div>
@@ -663,10 +725,11 @@ function setCashDir(dir) {
   document.getElementById('cashOutBtn').className = 'cash-dir-btn' + (dir === 'out' ? ' active-out' : '');
 }
 
-function getPaymentMethods() {
-  const map = [['payCash','Cash'],['payZelle','Zelle'],['payVenmo','Venmo'],
-               ['payPaypal','PayPal'],['payWire','Wire'],['payWise','Wise'],['payOther','Other']];
-  return map.filter(([id]) => document.getElementById(id).checked).map(([,label]) => label);
+function getPaymentMethods(prefix) {
+  prefix = prefix || 'pay';
+  const map = [['Cash','Cash'],['Zelle','Zelle'],['Venmo','Venmo'],
+               ['Paypal','PayPal'],['Wire','Wire'],['Wise','Wise'],['Other','Other']];
+  return map.filter(([key]) => document.getElementById(prefix + key).checked).map(([,label]) => label);
 }
 
 function getSellBuyItems() {
@@ -688,6 +751,7 @@ function getTradeItems(prefix) {
 function resetCheckboxes() {
   ['outSealed','outSingles','outSlabs','inSealed','inSingles','inSlabs',
    'payCash','payZelle','payVenmo','payPaypal','payWire','payWise','payOther',
+   'tradePayCash','tradePayZelle','tradePayVenmo','tradePayPaypal','tradePayWire','tradePayWise','tradePayOther',
    'sbSealed','sbSingles','sbSlabs'].forEach(id => {
     document.getElementById(id).checked = false;
   });
@@ -772,7 +836,7 @@ function submitEntry() {
     desc:     desc || null,
     itemsOut: currentType === 'trade' ? getTradeItems('out') : [],
     itemsIn:  currentType === 'trade' ? getTradeItems('in')  : [],
-    paymentMethods: currentType !== 'trade' ? getPaymentMethods() : [],
+    paymentMethods: currentType !== 'trade' ? getPaymentMethods('pay') : getPaymentMethods('tradePay'),
     itemTypes:      currentType !== 'trade' ? getSellBuyItems()   : [],
     time:     now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     date:     now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -823,10 +887,12 @@ function renderLedger() {
       ? `<span class="entry-badge badge-cash-${e.cashDir}">${e.cashDir === 'in' ? 'Cash In' : 'Cash Out'}</span>`
       : '';
     let tradeItems = '';
-    if (e.type === 'trade' && ((e.itemsOut && e.itemsOut.length) || (e.itemsIn && e.itemsIn.length))) {
+    if (e.type === 'trade') {
       const outStr = e.itemsOut && e.itemsOut.length ? 'Out: ' + e.itemsOut.join(', ') : '';
       const inStr  = e.itemsIn  && e.itemsIn.length  ? 'In: '  + e.itemsIn.join(', ')  : '';
-      tradeItems = `<div class="entry-trade-items">${[outStr, inStr].filter(Boolean).join(' · ')}</div>`;
+      const payStr = e.paymentMethods && e.paymentMethods.length ? 'Pay: ' + e.paymentMethods.join(', ') : '';
+      const parts = [outStr, inStr, payStr].filter(Boolean);
+      if (parts.length) tradeItems = `<div class="entry-trade-items">${parts.join(' · ')}</div>`;
     }
     let sellBuyMeta = '';
     if (e.type !== 'trade') {
