@@ -393,6 +393,11 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
 .bar-row-fill { height: 100%; border-radius: 4px; background: var(--brand-gradient); animation: fadeUp .4s ease both; }
 .bar-row-val { width: 24px; text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); flex-shrink: 0; }
 .az-bars-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.az-chart-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--text); margin-bottom: 14px; }
+.az-chart-legend span { display: flex; align-items: center; gap: 5px; }
+.lg-swatch { display: inline-block; }
+.lg-bar { width: 9px; height: 9px; border-radius: 2px; background: var(--sell); }
+.lg-line { width: 14px; height: 0; }
 </style>
 </head>
 <body>
@@ -624,6 +629,21 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
     <div class="az-stats-grid" id="azStats"></div>
 
     <div class="az-section">
+      <div class="section-head"><h2>Sales over time</h2></div>
+      <div class="az-bars-card" id="azChartCard">
+        <div class="az-chart-legend">
+          <span><span class="lg-swatch lg-bar"></span>Total sold</span>
+          <span><span class="lg-swatch lg-line" style="border-top:2px solid var(--brand-blue);"></span>Sealed</span>
+          <span><span class="lg-swatch lg-line" style="border-top:2px dashed var(--brand-purple);"></span>Singles</span>
+          <span><span class="lg-swatch lg-line" style="border-top:2px dotted var(--trade);"></span>Slabs</span>
+        </div>
+        <div style="position:relative;width:100%;height:200px;">
+          <canvas id="salesChart" role="img" aria-label="Chart of total sales per day as bars, with lines for Sealed, Singles, and Slabs transaction counts per day"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="az-section">
       <div class="section-head"><h2>By show</h2></div>
       <div class="ledger" id="azShowList"></div>
     </div>
@@ -675,6 +695,7 @@ let recSeconds     = 0;
 let stream         = null;
 let pendingDeleteId = null;
 let analyticsOrigin = 'picker';
+let salesChartInstance = null;
 
 function loadData() {
   try { shows   = JSON.parse(localStorage.getItem(SHOWS_KEY))   || []; } catch(e) { shows = []; }
@@ -1199,6 +1220,79 @@ function renderAnalytics() {
   });
   renderBarChart(payCounts, 'azPayBars');
   renderBarChart(itemCounts, 'azItemBars');
+  ensureChartJs(renderSalesChart);
+}
+
+function ensureChartJs(cb) {
+  if (window.Chart) { cb(); return; }
+  const existing = document.getElementById('chartjs-lib');
+  if (existing) { existing.addEventListener('load', cb, { once: true }); return; }
+  const script = document.createElement('script');
+  script.id = 'chartjs-lib';
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+  script.onload = cb;
+  script.onerror = () => showToast('Could not load chart (offline?)');
+  document.head.appendChild(script);
+}
+
+function formatShortDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function buildSalesOverTimeData() {
+  const byDate = {};
+  entries.forEach(e => {
+    const key = e.dateISO || isoOf(new Date(e.sortTs || e.id));
+    if (!byDate[key]) byDate[key] = { total: 0, sealed: 0, singles: 0, slabs: 0 };
+    if (e.type === 'sell') byDate[key].total += e.amount;
+    const tags = [].concat(e.itemTypes || [], e.itemsOut || [], e.itemsIn || []);
+    tags.forEach(t => {
+      if (t === 'Sealed') byDate[key].sealed++;
+      else if (t === 'Single(s)') byDate[key].singles++;
+      else if (t === 'Slab(s)') byDate[key].slabs++;
+    });
+  });
+  const dates = Object.keys(byDate).sort().slice(-20);
+  return {
+    labels:  dates.map(formatShortDate),
+    totals:  dates.map(d => Math.round(byDate[d].total)),
+    sealed:  dates.map(d => byDate[d].sealed),
+    singles: dates.map(d => byDate[d].singles),
+    slabs:   dates.map(d => byDate[d].slabs),
+  };
+}
+
+function renderSalesChart() {
+  const canvas = document.getElementById('salesChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const data = buildSalesOverTimeData();
+  if (salesChartInstance) { salesChartInstance.destroy(); salesChartInstance = null; }
+  if (!data.labels.length) {
+    document.getElementById('azChartCard').innerHTML = '<div class="ledger-empty" style="border:none;padding:20px 0;">No sales data yet.</div>';
+    return;
+  }
+  const mutedColor = '#7a7a90';
+  salesChartInstance = new Chart(canvas, {
+    data: {
+      labels: data.labels,
+      datasets: [
+        { type: 'bar',  label: 'Total sold ($)', data: data.totals,  backgroundColor: '#00e5a0', borderRadius: 4, yAxisID: 'y',  order: 3, maxBarThickness: 18 },
+        { type: 'line', label: 'Sealed',  data: data.sealed,  borderColor: '#3ec6ff', backgroundColor: '#3ec6ff', pointRadius: 3, pointBackgroundColor: '#3ec6ff', tension: 0.3, yAxisID: 'y1', order: 1, borderWidth: 2 },
+        { type: 'line', label: 'Singles', data: data.singles, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', pointRadius: 3, pointBackgroundColor: '#8b5cf6', tension: 0.3, yAxisID: 'y1', order: 1, borderWidth: 2, borderDash: [6,3] },
+        { type: 'line', label: 'Slabs',   data: data.slabs,   borderColor: '#ffb84d', backgroundColor: '#ffb84d', pointRadius: 3, pointBackgroundColor: '#ffb84d', tension: 0.3, yAxisID: 'y1', order: 1, borderWidth: 2, borderDash: [1,3] }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x:  { grid: { display: false }, ticks: { color: mutedColor, font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y:  { position: 'left',  beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: mutedColor, font: { size: 10 }, callback: v => '$' + v } },
+        y1: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { color: mutedColor, font: { size: 10 }, precision: 0 } }
+      }
+    }
+  });
 }
 
 function exportAllCSV() {
