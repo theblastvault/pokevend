@@ -629,7 +629,7 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
     <div class="az-stats-grid" id="azStats"></div>
 
     <div class="az-section">
-      <div class="section-head"><h2>Sales over time</h2></div>
+      <div class="section-head"><h2>Sales by show</h2></div>
       <div class="az-bars-card" id="azChartCard">
         <div class="az-chart-legend">
           <span><span class="lg-swatch lg-bar"></span>Total sold</span>
@@ -638,7 +638,7 @@ video.live-feed { width: 100%; border-radius: var(--radius-sm); max-height: 180p
           <span><span class="lg-swatch lg-line" style="border-top:2px dotted var(--trade);"></span>Slabs</span>
         </div>
         <div style="position:relative;width:100%;height:200px;">
-          <canvas id="salesChart" role="img" aria-label="Chart of total sales per day as bars, with lines for Sealed, Singles, and Slabs transaction counts per day"></canvas>
+          <canvas id="salesChart" role="img" aria-label="Chart of total sales per show as bars, with lines for Sealed, Singles, and Slabs transaction counts per show"></canvas>
         </div>
       </div>
     </div>
@@ -1235,38 +1235,39 @@ function ensureChartJs(cb) {
   document.head.appendChild(script);
 }
 
-function formatShortDate(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function buildSalesOverTimeData() {
-  const byDate = {};
-  entries.forEach(e => {
-    const key = e.dateISO || isoOf(new Date(e.sortTs || e.id));
-    if (!byDate[key]) byDate[key] = { total: 0, sealed: 0, singles: 0, slabs: 0 };
-    if (e.type === 'sell') byDate[key].total += e.amount;
-    const tags = [].concat(e.itemTypes || [], e.itemsOut || [], e.itemsIn || []);
-    tags.forEach(t => {
-      if (t === 'Sealed') byDate[key].sealed++;
-      else if (t === 'Single(s)') byDate[key].singles++;
-      else if (t === 'Slab(s)') byDate[key].slabs++;
+function buildSalesByShowData() {
+  const ordered = shows.slice().sort((a, b) => a.createdAt - b.createdAt).slice(-20);
+  const labels = [];
+  const fullNames = [];
+  const totals = [];
+  const sealed = [];
+  const singles = [];
+  const slabs = [];
+  ordered.forEach(s => {
+    let total = 0, sealedCt = 0, singlesCt = 0, slabsCt = 0;
+    entries.filter(e => e.showId === s.id).forEach(e => {
+      if (e.type === 'sell') total += e.amount;
+      const tags = [].concat(e.itemTypes || [], e.itemsOut || [], e.itemsIn || []);
+      tags.forEach(t => {
+        if (t === 'Sealed') sealedCt++;
+        else if (t === 'Single(s)') singlesCt++;
+        else if (t === 'Slab(s)') slabsCt++;
+      });
     });
+    labels.push(s.name.length > 14 ? s.name.slice(0, 13) + '…' : s.name);
+    fullNames.push(s.name);
+    totals.push(Math.round(total));
+    sealed.push(sealedCt);
+    singles.push(singlesCt);
+    slabs.push(slabsCt);
   });
-  const dates = Object.keys(byDate).sort().slice(-20);
-  return {
-    labels:  dates.map(formatShortDate),
-    totals:  dates.map(d => Math.round(byDate[d].total)),
-    sealed:  dates.map(d => byDate[d].sealed),
-    singles: dates.map(d => byDate[d].singles),
-    slabs:   dates.map(d => byDate[d].slabs),
-  };
+  return { labels, fullNames, totals, sealed, singles, slabs };
 }
 
 function renderSalesChart() {
   const canvas = document.getElementById('salesChart');
   if (!canvas || typeof Chart === 'undefined') return;
-  const data = buildSalesOverTimeData();
+  const data = buildSalesByShowData();
   if (salesChartInstance) { salesChartInstance.destroy(); salesChartInstance = null; }
   if (!data.labels.length) {
     document.getElementById('azChartCard').innerHTML = '<div class="ledger-empty" style="border:none;padding:20px 0;">No sales data yet.</div>';
@@ -1285,7 +1286,10 @@ function renderSalesChart() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false, callbacks: { title: items => data.fullNames[items[0].dataIndex] } }
+      },
       scales: {
         x:  { grid: { display: false }, ticks: { color: mutedColor, font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
         y:  { position: 'left',  beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: mutedColor, font: { size: 10 }, callback: v => '$' + v } },
